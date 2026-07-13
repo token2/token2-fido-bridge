@@ -1,4 +1,7 @@
-# Drop-in for an EXISTING install (Python or C++) already advertising 349e:0010.
-# Copy to /etc/udev/rules.d/69-fido2-bridge-snap.rules, then:
-#   sudo udevadm control --reload-rules && sudo systemctl restart token2-fido-bridge
-SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ENV{HID_ID}=="0003:0000349E:00000001", TAG+="snap_firefox_firefox", TAG+="snap_firefox_geckodriver", TAG+="uaccess"
+# Standalone drop-in for an existing install. Copy to
+#   /etc/udev/rules.d/60-token2-snap-firefox.rules
+# then: sudo udevadm control --reload-rules && sudo systemctl restart token2-fido-bridge
+#
+# Matches the UHID virtual FIDO device by its parent kernel name (bus:VID:PID),
+# since UHID hidraw nodes expose neither HID_ID nor a USB idVendor parent.
+SUBSYSTEM=="hidraw", KERNELS=="0003:349E:0001.*", TAG+="snap_firefox_firefox", TAG+="snap_firefox_geckodriver", TAG+="uaccess"
