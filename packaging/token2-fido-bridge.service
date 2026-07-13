@@ -1,0 +1,16 @@
+[Unit]
+Description=FIDO2 PC/SC to USB-HID bridge (WebAuthn for smartcards) [C++]
+After=pcscd.service
+Wants=pcscd.service
+
+[Service]
+Type=simple
+# Ensure the uhid kernel module is available before we open /dev/uhid.
+ExecStartPre=-/sbin/modprobe uhid
+ExecStart=/usr/bin/token2-fido-bridge
+Restart=on-failure
+RestartSec=2
+User=root
+
+[Install]
+WantedBy=multi-user.target

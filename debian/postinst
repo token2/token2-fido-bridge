@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+if [ "$1" = "configure" ]; then
+    modprobe uhid 2>/dev/null || true
+    udevadm control --reload-rules || true
+    udevadm trigger || true
+    if [ -d /run/systemd/system ]; then
+        systemctl daemon-reload || true
+        systemctl enable --now token2-fido-bridge.service || true
+    fi
+fi
+#DEBHELPER#
+exit 0

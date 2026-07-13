@@ -1,0 +1,10 @@
+/build/
+*.o
+*.deb
+*.rpm
+*.tar.gz
+debian/.debhelper/
+debian/token2-fido-bridge/
+debian/files
+debian/*.substvars
+debian/*.log

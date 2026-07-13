@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+if [ "$1" = "remove" ] || [ "$1" = "deconfigure" ]; then
+    if [ -d /run/systemd/system ]; then
+        systemctl disable --now token2-fido-bridge.service || true
+    fi
+fi
+#DEBHELPER#
+exit 0

@@ -1,0 +1,15 @@
+Source: token2-fido-bridge
+Section: utils
+Priority: optional
+Maintainer: Token2 <support@token2.com>
+Build-Depends: debhelper-compat (= 13), cmake, g++, libpcsclite-dev
+Standards-Version: 4.6.2
+Homepage: https://www.token2.com
+
+Package: token2-fido-bridge
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, pcscd, libpcsclite1
+Description: FIDO2 PC/SC to USB-HID bridge (C++)
+ Creates a virtual USB-HID FIDO2 authenticator that relays CTAP2 to a
+ PC/SC smartcard, letting browsers use contact/NFC FIDO2 cards for WebAuthn.
+ Advertises the Token2 USB vendor ID so snap-confined browsers can access it.

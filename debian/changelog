@@ -1,0 +1,8 @@
+token2-fido-bridge (0.1.0-1) unstable; urgency=medium
+
+  * Initial release. Native C++ FIDO2 PC/SC-to-USB-HID bridge.
+  * Single static binary (~250 KB) vs multi-MB Python equivalents.
+  * Configurable VID/PID (default Token2 349e:0001).
+  * systemd service, udev rule, uhid module auto-load; .deb/.rpm packaging.
+
+ -- Token2 <support@token2.com>  Mon, 13 Jul 2026 21:00:00 +0000
