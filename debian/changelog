@@ -1,3 +1,11 @@
+token2-fido-bridge (0.1.1-1) unstable; urgency=medium
+
+  * Fix snap-confined Firefox support: match the virtual UHID device by parent
+    kernel name (KERNELS) instead of the nonexistent HID_ID property, so the
+    snap_firefox_firefox udev tag is applied correctly.
+
+ -- Token2 <support@token2.com>  Mon, 13 Jul 2026 22:00:00 +0000
+
 token2-fido-bridge (0.1.0-1) unstable; urgency=medium
 
   * Initial release. Native C++ FIDO2 PC/SC-to-USB-HID bridge.
