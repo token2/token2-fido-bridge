@@ -30,7 +30,7 @@ Advertises the Token2 USB vendor ID so smartcard-based keys are recognised.
 
 %post
 /sbin/modprobe uhid 2>/dev/null || :
-%udev_rules_update 2>/dev/null || udevadm control --reload-rules || :
+udevadm control --reload-rules 2>/dev/null || :
 udevadm trigger || :
 %systemd_post token2-fido-bridge.service
 if [ $1 -eq 1 ]; then
