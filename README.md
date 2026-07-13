@@ -3,7 +3,7 @@
 A lightweight native daemon that lets browsers use **PC/SC smartcards** (contact
 or NFC) as **FIDO2 / WebAuthn** security keys on Linux.
 
-This project is **different from FIDO Bridge for Android**, but serves a similar
+This project is **[different from FIDO Bridge for Android](https://www.token2.swiss/site/page/fido-bridge-for-android-user-manual)**, but serves a similar
 purpose: bridging smartcard-based credentials to FIDO2 / WebAuthn. This version
 is designed specifically for **Linux desktop environments**.
 
@@ -21,7 +21,7 @@ kernel interface and relays CTAP2 / U2F traffic to a smartcard over PC/SC — so
 any browser that speaks USB-HID WebAuthn can authenticate with a card-based
 credential, no special browser support required.
 
-Inspired by an earlier Python implementation of the same idea; this is an
+Inspired by an earlier Python [implementation](https://github.com/BryanJacobs/fido2-hid-bridge) of the same idea; this is an
 independent **C++** rewrite focused on a single static binary, minimal
 footprint, and clean native packaging.
 
