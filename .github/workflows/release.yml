@@ -1,8 +1,7 @@
 name: Build and Release
 
-# Build the .deb on every version tag (e.g. v0.1.0) and attach it to a
-# GitHub Release. Also build on PRs/pushes to catch breakage early (without
-# publishing).
+# Build .deb and .rpm on every version tag (e.g. v0.1.1) and attach them to a
+# GitHub Release. Also build on PRs/pushes to catch breakage early.
 on:
   push:
     tags:
@@ -19,9 +18,6 @@ permissions:
 jobs:
   build-deb:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [amd64]     # add arm64 here later if you want (see notes)
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,16 +42,73 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: deb-${{ matrix.arch }}
+          name: deb
           path: dist/*.deb
+
+  build-rpm:
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:41
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          dnf install -y \
+            gcc-c++ cmake make rpm-build \
+            pcsc-lite-devel systemd-rpm-macros \
+            tar gzip git
+
+      - name: Determine version
+        id: ver
+        run: |
+          # Use the tag (v0.1.1 -> 0.1.1) if present, else the spec's version.
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=0.0.0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build .rpm
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          NAME=token2-fido-bridge
+
+          # Set up rpmbuild tree
+          mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+
+          # Inject the version into the spec
+          sed "s/^Version:.*/Version:        ${VERSION}/" \
+            packaging/${NAME}.spec > ~/rpmbuild/SPECS/${NAME}.spec
+
+          # Create the source tarball named ${NAME}-${VERSION}/ as %autosetup expects
+          git config --global --add safe.directory "$PWD"
+          mkdir -p /tmp/${NAME}-${VERSION}
+          cp -r . /tmp/${NAME}-${VERSION}/
+          rm -rf /tmp/${NAME}-${VERSION}/.git
+          tar czf ~/rpmbuild/SOURCES/${NAME}-${VERSION}.tar.gz \
+            -C /tmp ${NAME}-${VERSION}
+
+          rpmbuild -ba ~/rpmbuild/SPECS/${NAME}.spec
+
+          mkdir -p dist
+          cp ~/rpmbuild/RPMS/*/*.rpm dist/
+          ls -l dist/
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpm
+          path: dist/*.rpm
 
   release:
     # Only publish a release when a version tag was pushed.
-    needs: build-deb
+    needs: [build-deb, build-rpm]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
-      - name: Download built .deb
+      - name: Download built packages
         uses: actions/download-artifact@v4
         with:
           path: dist
@@ -63,10 +116,13 @@ jobs:
       - name: Flatten artifact dirs
         run: |
           find dist -name '*.deb' -exec mv {} dist/ \;
+          find dist -name '*.rpm' -exec mv {} dist/ \;
           ls -l dist/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.deb
+          files: |
+            dist/*.deb
+            dist/*.rpm
           generate_release_notes: true
