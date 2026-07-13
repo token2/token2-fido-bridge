@@ -1,5 +1,5 @@
 Name:           token2-fido-bridge
-Version:        0.1.0
+Version:        0.1.1
 Release:        1%{?dist}
 Summary:        FIDO2 PC/SC to USB-HID bridge (C++)
 
@@ -9,14 +9,18 @@ Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  gcc-c++
 BuildRequires:  cmake
+BuildRequires:  make
 BuildRequires:  pcsc-lite-devel
 BuildRequires:  systemd-rpm-macros
+BuildRequires:  libstdc++-static
 Requires:       pcsc-lite
 
 %description
-Creates a virtual USB-HID FIDO2 authenticator that relays CTAP2 to a PC/SC
-smartcard, letting browsers use contact/NFC FIDO2 cards for WebAuthn.
-Advertises the Token2 USB vendor ID so smartcard-based keys are recognised.
+token2-fido-bridge lets browsers use PC/SC smartcards (contact or NFC) as
+FIDO2/WebAuthn security keys on Linux. It creates a virtual USB-HID FIDO2
+authenticator via the Linux uhid interface and relays CTAP2/U2F traffic to
+the card over PC/SC. Works with Chromium/Chrome and, via a bundled udev rule,
+Snap-confined Firefox.
 
 %prep
 %autosetup
@@ -31,7 +35,7 @@ Advertises the Token2 USB vendor ID so smartcard-based keys are recognised.
 %post
 /sbin/modprobe uhid 2>/dev/null || :
 udevadm control --reload-rules 2>/dev/null || :
-udevadm trigger || :
+udevadm trigger 2>/dev/null || :
 %systemd_post token2-fido-bridge.service
 if [ $1 -eq 1 ]; then
     systemctl enable --now token2-fido-bridge.service 2>/dev/null || :
@@ -52,5 +56,10 @@ fi
 %{_prefix}/lib/modules-load.d/token2-fido-bridge-uhid.conf
 
 %changelog
+* Tue Jul 14 2026 Token2 <support@token2.com> - 0.1.1-1
+- Fix snap-confined Firefox support via KERNELS-based udev tagging.
+- CI: build and publish .rpm packages.
+- Declare libstdc++-static build dependency for static linking.
+
 * Mon Jul 13 2026 Token2 <support@token2.com> - 0.1.0-1
 - Initial C++ port with configurable VID/PID (default Token2 349e:0001).
