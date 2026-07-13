@@ -58,12 +58,13 @@ jobs:
           dnf install -y \
             gcc-c++ cmake make rpm-build \
             pcsc-lite-devel systemd-rpm-macros \
+            libstdc++-static \
             tar gzip git
 
       - name: Determine version
         id: ver
         run: |
-          # Use the tag (v0.1.1 -> 0.1.1) if present, else the spec's version.
+          # Use the tag (v0.1.1 -> 0.1.1) if present, else a placeholder.
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
           else
