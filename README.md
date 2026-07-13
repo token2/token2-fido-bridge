@@ -10,26 +10,7 @@ This version  is designed specifically for **Linux desktop environments**. Inspi
 independent **C++** rewrite focused on a single static binary, minimal
 footprint, and clean native packaging.
 
-## Current support status
 
-As of now, the project has only been tested on **Ubuntu**.
-
-Tested with **Chromium** and the **Snap version of Firefox** included with
-Ubuntu. Snap-confined Firefox is supported through a udev rule (installed
-automatically by the package) that tags the virtual device for the browser's
-sandbox.
-
-If Firefox does not detect the key, ensure the u2f interface is connected:
-
-    snap connect firefox:u2f-devices
-
-then fully quit and reopen Firefox..
-
-
-It creates a virtual USB-HID FIDO2 authenticator through the Linux `uhid`
-kernel interface and relays CTAP2 / U2F traffic to a smartcard over PC/SC — so
-any browser that speaks USB-HID WebAuthn can authenticate with a card-based
-credential, no special browser support required.
 
 
 
@@ -129,7 +110,37 @@ Options:
 | `--pid HEX` | `FIDO2_BRIDGE_PID` | USB product ID (default `0x0001`) |
 | `--name NAME` | `FIDO2_BRIDGE_NAME` | Device name |
 
-Test at [webauthn.io](https://webauthn.io) with a card in the reader.
+Test at https://www.token2.swiss/tools/fido2-demo with a card in the reader.
+
+## Current support status
+
+As of now, the project has only been tested on **Ubuntu**.
+
+Tested with **Chromium** and the **Snap version of Firefox** included with
+Ubuntu. Snap-confined Firefox is supported through a udev rule (installed
+automatically by the package) that tags the virtual device for the browser's
+sandbox.
+
+### Firefox (Snap) — one-time restart
+
+Snap-packaged Firefox (the default on Ubuntu) decides which devices it can
+access **at launch**. If Firefox is already running when you install
+token2-fido-bridge, it won't see the virtual key until you fully restart it —
+closing the window is not enough, because Snap keeps a background process.
+
+Fully quit and reopen Firefox:
+
+    snap stop firefox
+    pkill -f firefox
+
+Then reopen Firefox and try again at https://www.token2.swiss/tools/fido2-demo  
+
+If Firefox still doesn't detect the key, make sure the u2f interface is
+connected:
+
+    snap connect firefox:u2f-devices
+
+Chromium and Chrome pick up the device immediately and need no restart.
 
 ## Configuration
 
