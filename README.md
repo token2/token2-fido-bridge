@@ -1,11 +1,12 @@
-# token2-fido-bridge for Linux
+# token2-fido-bridge for Linux <img width="200"  alt="image" src="https://github.com/user-attachments/assets/f1c51519-14fb-4888-be3a-c89ca551319e" align=right />
 
 A lightweight native daemon that lets browsers use **PC/SC smartcards** (contact
-or NFC) as **FIDO2 / WebAuthn** security keys on Linux.
+or NFC) as **FIDO2 / WebAuthn** security keys on Linux. 
 
 This project is **[different from FIDO Bridge for Android](https://www.token2.swiss/site/page/fido-bridge-for-android-user-manual)**, but serves a similar
-purpose: bridging smartcard-based credentials to FIDO2 / WebAuthn. This version
-is designed specifically for **Linux desktop environments**.
+purpose: bridging smartcard-based credentials to FIDO2 / WebAuthn. 
+
+This version  is designed specifically for **Linux desktop environments**.
 
 ## Current support status
 
