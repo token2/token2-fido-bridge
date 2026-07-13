@@ -5,11 +5,22 @@ Maintainer: Token2 <support@token2.com>
 Build-Depends: debhelper-compat (= 13), cmake, g++, libpcsclite-dev
 Standards-Version: 4.6.2
 Homepage: https://www.token2.com
+Vcs-Git: https://github.com/token2/token2-fido-bridge.git
+Vcs-Browser: https://github.com/token2/token2-fido-bridge
 
 Package: token2-fido-bridge
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, pcscd, libpcsclite1
-Description: FIDO2 PC/SC to USB-HID bridge (C++)
- Creates a virtual USB-HID FIDO2 authenticator that relays CTAP2 to a
- PC/SC smartcard, letting browsers use contact/NFC FIDO2 cards for WebAuthn.
- Advertises the Token2 USB vendor ID so snap-confined browsers can access it.
+Recommends: pcsc-tools
+Description: use smartcards as FIDO2/WebAuthn keys (PC/SC to USB-HID bridge)
+ token2-fido-bridge lets browsers use PC/SC smartcards (contact or NFC) as
+ FIDO2/WebAuthn security keys on Linux. It creates a virtual USB-HID FIDO2
+ authenticator via the Linux uhid interface and relays CTAP2/U2F traffic to
+ the card over PC/SC.
+ .
+ A lightweight native C++ daemon: a single binary of a few hundred kilobytes
+ with no interpreter or runtime dependencies beyond the system PC/SC library.
+ Works with Chromium/Chrome and, via a bundled udev rule, Snap-confined
+ Firefox.
+ .
+ Maintained by Token2 (https://www.token2.com).
