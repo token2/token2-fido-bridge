@@ -1,8 +1,14 @@
 # Ensure /dev/uhid is usable by the bridge (root by default; loosen if needed).
 KERNEL=="uhid", TAG+="systemd"
 
-# Tag the virtual UHID FIDO device (Token2 349e:0010) so a snap-confined
-# Firefox can open it. UHID devices have no USB parent, so the snap's stock
-# ATTRS{idVendor} rule never matches — we match the kernel HID_ID instead.
-# HID_ID format is bus:VVVVVVVV:PPPPPPPP in uppercase hex; USB bus = 0003.
-SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ENV{HID_ID}=="0003:0000349E:00000001", TAG+="snap_firefox_firefox", TAG+="snap_firefox_geckodriver", TAG+="uaccess"
+# Tag the virtual UHID FIDO device so a snap-confined Firefox can open it.
+#
+# A UHID device has no USB parent, so snapd's stock u2f-devices rule
+# (ATTRS{idVendor}=="349e") never matches it, and the hidraw node carries no
+# HID_ID property either. What IS reliably present is the parent HID device's
+# kernel name, which embeds bus:VID:PID — e.g. "0003:349E:0001.0013". We match
+# that via KERNELS with a wildcard for the trailing per-instance counter.
+#
+# If you change the device PID (BRIDGE_DEFAULT_PID), update the PID field below
+# to match (uppercase hex, no zero-padding): 0003:349E:<PID>.*
+SUBSYSTEM=="hidraw", KERNELS=="0003:349E:0001.*", TAG+="snap_firefox_firefox", TAG+="snap_firefox_geckodriver", TAG+="uaccess"
