@@ -1,5 +1,5 @@
 Name:           token2-fido-bridge
-Version:        0.1.1
+Version:        0.1.2
 Release:        1%{?dist}
 Summary:        FIDO2 PC/SC to USB-HID bridge (C++)
 
@@ -56,6 +56,8 @@ fi
 %{_prefix}/lib/modules-load.d/token2-fido-bridge-uhid.conf
 
 %changelog
+* Tue Jul 14 2026 Token2 <support@token2.com> - 0.1.2-1
+- Publish .rpm packages alongside .deb in releases.
 * Tue Jul 14 2026 Token2 <support@token2.com> - 0.1.1-1
 - Fix snap-confined Firefox support via KERNELS-based udev tagging.
 - CI: build and publish .rpm packages.
