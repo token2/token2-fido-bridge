@@ -14,6 +14,16 @@ footprint, and clean native packaging.
 
 
 
+## About
+
+`token2-fido-bridge` is developed and maintained by [Token2](https://www.token2.swiss).
+While it is built and tested with Token2 FIDO2.1 security keys and smartcards, it is
+not tied to Token2 hardware in any way : it works with **any FIDO2 / FIDO2.1
+authenticator** exposed over PC/SC, including contact smartcards, NFC tokens, and
+NFC-capable security keys from other vendors. The bridge speaks the standard CTAP2
+and ISO 7816 protocols, so any spec-compliant device that your PC/SC stack can see
+should work.
+
 
 
 ## Why C++
