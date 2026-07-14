@@ -181,6 +181,29 @@ sends CTAP-HID frames, the bridge reassembles them, translates CBOR commands
 into ISO 7816 APDUs, and exchanges them with the card via PC/SC — then frames
 the card's response back over HID.
 
+## Managing the service
+
+The package installs `token2-fido-bridge` as a systemd service that starts
+automatically at boot, so you normally don't need to touch it. If you do need to
+control it manually, use the standard `systemctl` actions:
+
+```bash
+sudo systemctl status token2-fido-bridge     # check whether it's running
+sudo systemctl restart token2-fido-bridge    # restart (e.g. after changing readers)
+sudo systemctl stop token2-fido-bridge        # stop it
+sudo systemctl start token2-fido-bridge       # start it again
+```
+
+To view the logs (useful if a card isn't being detected):
+
+```bash
+sudo journalctl -u token2-fido-bridge -n 20 --no-pager
+```
+
+<img width="750" height="209" alt="image" src="https://github.com/user-attachments/assets/8ccb3ebd-86b0-4fec-91ad-543ab0dae106" />
+
+
+
 ## Packaging notes
 
 This is a privileged system daemon: it needs `/dev/uhid`, installs a systemd
