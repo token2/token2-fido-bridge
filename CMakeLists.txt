@@ -9,7 +9,7 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-add_compile_options(-Wall -Wextra -O2)
+add_compile_options(-Wall -Wextra)
 
 # Optional: override the shipped default device identity at configure time, e.g.
 #   cmake -B build -S . -DBRIDGE_DEFAULT_PID=0x0200
