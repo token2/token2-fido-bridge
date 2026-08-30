@@ -21,15 +21,11 @@ set(BRIDGE_DEFAULT_PID "" CACHE STRING "Default USB product ID (hex, e.g. 0x0001
 # a working reader / pcscd).
 option(STATIC_CXX_RUNTIME "Static-link libstdc++ and libgcc" ON)
 
-find_path(PCSCLITE_INCLUDE_DIR winscard.h PATH_SUFFIXES PCSC pcsc)
-find_library(PCSCLITE_LIB pcsclite)
-if(NOT PCSCLITE_INCLUDE_DIR OR NOT PCSCLITE_LIB)
-  message(FATAL_ERROR "libpcsclite-dev not found (winscard.h / libpcsclite)")
-endif()
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PCSCLITE REQUIRED IMPORTED_TARGET libpcsclite)
 
 add_executable(token2-fido-bridge src/main.cpp)
-target_include_directories(token2-fido-bridge PRIVATE ${PCSCLITE_INCLUDE_DIR} src)
-target_link_libraries(token2-fido-bridge PRIVATE ${PCSCLITE_LIB})
+target_link_libraries(token2-fido-bridge PRIVATE PkgConfig::PCSCLITE)
 
 if(BRIDGE_DEFAULT_VID)
   target_compile_definitions(token2-fido-bridge PRIVATE BRIDGE_DEFAULT_VID=${BRIDGE_DEFAULT_VID})
