@@ -13,8 +13,10 @@
 #include <string>
 #include <vector>
 
+#include <cerrno>
 #include <fcntl.h>
 #include <linux/uhid.h>
+#include <poll.h>
 #include <unistd.h>
 
 namespace fido2bridge {
@@ -93,6 +95,26 @@ public:
         ev.u.input2.size = static_cast<uint16_t>(n);
         std::memcpy(ev.u.input2.data, report.data(), n);
         write_event(ev);
+    }
+
+    // Wait up to timeout_ms for one uhid event and dispatch it. Returns false
+    // if the uhid fd is broken (caller should tear the device down). Lets the
+    // main loop interleave HID traffic with card-presence checks.
+    bool pump(int timeout_ms) {
+        struct pollfd pfd{};
+        pfd.fd = fd_;
+        pfd.events = POLLIN;
+        int n = ::poll(&pfd, 1, timeout_ms);
+        if (n < 0) return errno == EINTR;
+        if (n == 0) return true;  // timeout, nothing to do
+        if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) return false;
+
+        struct uhid_event ev{};
+        ssize_t ret = ::read(fd_, &ev, sizeof(ev));
+        if (ret < 0) return errno == EINTR || errno == EAGAIN;
+        if (ret == 0) return false;
+        dispatch(ev);
+        return true;
     }
 
     // Blocking read loop. Runs until the device is torn down / read error.

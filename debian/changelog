@@ -1,3 +1,13 @@
+token2-fido-bridge (0.1.3-1) unstable; urgency=medium
+
+  * Only expose the virtual FIDO HID device while a FIDO card is present.
+    CTAPHID INIT/GetInfo no longer wait up to 10 s for a card, which stalled
+    OpenSSH sk keys and other libfido2 clients using physical USB keys
+    (closes GitHub issue #2).
+  * Survive pcscd restarts; don't re-probe non-FIDO cards on every poll.
+
+ -- Token2 <support@token2.com>  Fri, 25 Sep 2026 12:00:00 +0000
+
 token2-fido-bridge (0.1.2-1) unstable; urgency=medium
 
   * Publish .rpm packages alongside .deb in releases.

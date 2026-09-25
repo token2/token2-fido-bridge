@@ -1,5 +1,5 @@
 Name:           token2-fido-bridge
-Version:        0.1.2
+Version:        0.1.3
 Release:        1%{?dist}
 Summary:        FIDO2 PC/SC to USB-HID bridge (C++)
 
@@ -56,6 +56,9 @@ fi
 %{_prefix}/lib/modules-load.d/token2-fido-bridge-uhid.conf
 
 %changelog
+* Fri Sep 25 2026 Token2 <support@token2.com> - 0.1.3-1
+- Expose the virtual FIDO device only while a FIDO card is present; fixes
+  10 s stalls of OpenSSH sk keys / libfido2 clients (GitHub issue #2).
 * Tue Jul 14 2026 Token2 <support@token2.com> - 0.1.2-1
 - Publish .rpm packages alongside .deb in releases.
 * Tue Jul 14 2026 Token2 <support@token2.com> - 0.1.1-1

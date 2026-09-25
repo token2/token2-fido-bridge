@@ -5,7 +5,12 @@
 //   - per-channel receive buffers with sequence checking and idle cleanup
 //   - INIT channel assignment, CBOR/MSG/PING/CANCEL/WINK/KEEPALIVE handlers
 //   - 64-byte response framing (7-byte init header, 5-byte cont header)
-// The PC/SC side is delegated to PcscManager / PcscDevice.
+// The PC/SC side is delegated to PcscDevice.
+//
+// Lifetime (issue #2): a CtapHidDevice — and therefore the virtual HID node —
+// exists only while a FIDO card is present. main.cpp creates it with an
+// already-connected PcscDevice and destroys it when the card goes away, so
+// INIT/GetInfo never wait for a card and never stall other FIDO clients.
 #pragma once
 
 #include <array>
@@ -20,7 +25,6 @@
 #include <vector>
 
 #include "pcsc.hpp"
-#include "pcsc_manager.hpp"
 #include "uhid_device.hpp"
 
 namespace fido2bridge {
@@ -33,15 +37,29 @@ static const Bytes BROADCAST_CHANNEL = {0xFF, 0xFF, 0xFF, 0xFF};
 
 class CtapHidDevice {
 public:
-    CtapHidDevice(uint16_t vid = DEFAULT_VID, uint16_t pid = DEFAULT_PID,
+    CtapHidDevice(std::unique_ptr<PcscDevice> card,
+                  uint16_t vid = DEFAULT_VID, uint16_t pid = DEFAULT_PID,
                   std::string name = "FIDO2 Virtual USB Device")
-        : uhid_(vid, pid, std::move(name)), rng_(std::random_device{}()) {
+        : uhid_(vid, pid, std::move(name)), chosen_device_(std::move(card)),
+          rng_(std::random_device{}()) {
         uhid_.on_output = [this](const Bytes& b) { process_hid_message(b); };
         uhid_.on_open   = [this]() { process_open(); };
         uhid_.on_close  = [this]() { process_close(); };
     }
 
     void run() { uhid_.run(); }
+
+    // Handle at most one uhid event, waiting up to timeout_ms for it.
+    // Returns false if the uhid device broke.
+    bool pump(int timeout_ms) { return uhid_.pump(timeout_ms); }
+
+    // True once the card stopped answering (removed mid-operation etc.).
+    bool failed() const { return failed_ || !chosen_device_; }
+
+    const std::string& reader_name() const {
+        static const std::string none;
+        return chosen_device_ ? chosen_device_->name() : none;
+    }
 
 private:
     // Per-channel receive state, mirroring the python tuple:
@@ -55,8 +73,8 @@ private:
     };
 
     UHidDevice                     uhid_;
-    PcscManager                    pcsc_;
     std::unique_ptr<PcscDevice>    chosen_device_;
+    bool                           failed_ = false;
     std::map<std::string, ChannelState> channels_;
     int                            reference_count_ = 0;
     std::mt19937                   rng_;
@@ -79,13 +97,10 @@ private:
 
     void process_close() {
         if (reference_count_ > 0) reference_count_--;
-        if (reference_count_ == 0) {
-            channels_.clear();
-            close_pcsc();
-        }
+        // Keep the card connection: the device's lifetime is tied to card
+        // presence, not to how many hosts have the hidraw node open.
+        if (reference_count_ == 0) channels_.clear();
     }
-
-    void close_pcsc() { chosen_device_.reset(); }
 
     // ---- incoming packet handling ----------------------------------------
 
@@ -205,10 +220,16 @@ private:
                     send_error(channel, 0x01);
                     return;
             }
+        } catch (const PcscError& e) {
+            // Transport failure: card removed / reader gone. Report it and
+            // let the main loop tear the virtual device down.
+            std::fprintf(stderr, "PC/SC error: %s\n", e.what());
+            send_error(channel, 0x7F);  // ERR_OTHER
+            failed_ = true;
+            return;
         } catch (const std::exception& e) {
             std::fprintf(stderr, "Error: %s\n", e.what());
             send_error(channel, 0x7F);  // ERR_OTHER
-            close_pcsc();
             return;
         }
         if (!have_response) return;
@@ -226,8 +247,10 @@ private:
             return false;
         }
 
+        // INIT is a pure transport handshake: no APDUs, no waiting. The card
+        // was already probed when the device was created, so its capability
+        // byte is cached.
         Bytes new_channel;
-        PcscDevice* dev = nullptr;
 
         if (channel == BROADCAST_CHANNEL) {
             if (channels_.size() > MAX_SIMULTANEOUS_CONNECTIONS) {
@@ -235,14 +258,13 @@ private:
                 return false;
             }
             new_channel = assign_channel_id();
-            dev = get_pcsc_device();
-            if (!dev) return false;
         } else {
             handle_cancel(channel);
-            dev = get_pcsc_device();
-            if (!dev) return false;
             new_channel = channel;
         }
+        const uint8_t caps =
+            chosen_device_ ? chosen_device_->capabilities()
+                           : static_cast<uint8_t>(CAP_CBOR);
 
         out.clear();
         out.insert(out.end(), buffer.begin(), buffer.end());        // nonce
@@ -251,7 +273,7 @@ private:
         out.push_back(0x01);                 // device version major
         out.push_back(0x00);                 // device version minor
         out.push_back(0x00);                 // device version build
-        out.push_back(dev->capabilities());  // capabilities from the card
+        out.push_back(caps);                 // capabilities from the card
         return true;
     }
 
@@ -281,15 +303,10 @@ private:
 
     // ---- device acquisition ----------------------------------------------
 
+    // Never waits: the device only exists while its card is connected.
     PcscDevice* get_pcsc_device() {
-        if (!chosen_device_) {
-            chosen_device_ = pcsc_.wait_for_device();
-            if (!chosen_device_) {
-                // python raises; we surface as a CTAP error upstream.
-                throw std::runtime_error(
-                    "Could not connect to a PC/SC device in time!");
-            }
-        }
+        if (!chosen_device_ || failed_)
+            throw PcscError("card no longer available");
         return chosen_device_.get();
     }
 
