@@ -12,6 +12,7 @@
 // is actually present, exactly like plugging/unplugging a physical key.
 #pragma once
 
+#include <cstdio>
 #include <map>
 #include <memory>
 #include <string>
@@ -35,6 +36,9 @@ public:
     // Cards that are present but are not FIDO (bank card, PIV-only card, ID
     // card in a built-in reader...) are remembered and not re-probed until
     // they are removed/re-inserted, so we don't hammer them every poll.
+    // A card is only written off after PROBE_ATTEMPTS failed probes on the
+    // same insertion: a freshly tapped NFC card can reject the first SELECT /
+    // GetInfo while it is still powering up (issue #7).
     std::unique_ptr<PcscDevice> find_fido_card() {
         auto states = reader_states();
 
@@ -43,20 +47,29 @@ public:
             bool keep = false;
             for (const auto& s : states)
                 if (s.name == it->first && is_present(s.state) &&
-                    event_count(s.state) == it->second)
+                    event_count(s.state) == it->second.event)
                     keep = true;
             it = keep ? std::next(it) : rejected_.erase(it);
         }
 
         for (const auto& s : states) {
             if (!is_present(s.state)) continue;
-            if (rejected_.count(s.name)) continue;
+            auto rej = rejected_.find(s.name);
+            if (rej != rejected_.end() && rej->second.fails >= PROBE_ATTEMPTS)
+                continue;  // definitely not a FIDO card; wait for removal
 
             ConnectResult r;
             auto dev = try_connect(s.name, r);
             if (dev) return dev;
-            if (r == ConnectResult::NotFido)
-                rejected_[s.name] = event_count(s.state);
+            if (r == ConnectResult::NotFido) {
+                auto& e = rejected_[s.name];  // zero-initialised if new
+                e.event = event_count(s.state);
+                if (++e.fails >= PROBE_ATTEMPTS)
+                    std::fprintf(stderr,
+                                 "Card in \"%s\" has no usable FIDO applet; "
+                                 "ignoring it until removed\n",
+                                 s.name.c_str());
+            }
             // Transient failures (sharing violation, race with removal) are
             // simply retried on the next poll.
         }
@@ -87,7 +100,13 @@ private:
 
     SCARDCONTEXT ctx_ = 0;
     bool context_broken_ = false;
-    std::map<std::string, DWORD> rejected_;  // reader -> card event counter
+    static constexpr int PROBE_ATTEMPTS = 5;  // x 200 ms poll = ~1 s warm-up
+
+    struct Rejection {
+        DWORD event;   // card event counter of the insertion we probed
+        int   fails;   // failed probes so far on that insertion
+    };
+    std::map<std::string, Rejection> rejected_;  // reader -> probe history
 
     static bool is_present(DWORD s) {
         return (s & SCARD_STATE_PRESENT) && !(s & SCARD_STATE_MUTE);
