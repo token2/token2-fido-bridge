@@ -181,6 +181,15 @@ sends CTAP-HID frames, the bridge reassembles them, translates CBOR commands
 into ISO 7816 APDUs, and exchanges them with the card via PC/SC — then frames
 the card's response back over HID.
 
+The virtual device exists **only while a FIDO card is present** in a reader —
+it appears when you insert/tap the card and disappears when you remove it,
+exactly like plugging and unplugging a USB security key. With no card present
+there is nothing for other FIDO clients (OpenSSH `sk` keys, `libfido2` tools,
+`pam-u2f`) to probe, so the bridge never slows down physical USB keys. Browsers
+pick the device up as soon as it appears, so you can start the WebAuthn prompt
+first and then tap the card — just keep it on the reader until the operation
+completes.
+
 ## Managing the service
 
 The package installs `token2-fido-bridge` as a systemd service that starts

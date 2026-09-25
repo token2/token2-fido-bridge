@@ -62,7 +62,7 @@ struct PcscError : std::runtime_error {
     using std::runtime_error::runtime_error;
 };
 
-// One connected PC/SC authenticator. Construct via PcscManager::wait_for_device.
+// One connected PC/SC authenticator. Construct via PcscManager::find_fido_card.
 class PcscDevice {
 public:
     PcscDevice(SCARDCONTEXT ctx, SCARDHANDLE card, DWORD active_protocol,
