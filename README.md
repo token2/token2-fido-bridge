@@ -74,11 +74,7 @@ service automatically.
 sudo dnf install ./token2-fido-bridge-0.1.0-1.x86_64.rpm
 ```
 
-### One-line installer (builds from source if no prebuilt package is hosted)
-
-```sh
-curl -sSL https://example.com/install.sh | sudo sh
-```
+ 
 
 ## Build from source
 
