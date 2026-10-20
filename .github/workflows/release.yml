@@ -45,7 +45,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: deb
+          name: deb-${{ matrix.os }}
           path: dist/*.deb
 
   build-rpm:
@@ -106,7 +106,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: rpm
+          name: rpm-${{ matrix.os }}
           path: dist/*.rpm
 
   release:
