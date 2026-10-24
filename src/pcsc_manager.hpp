@@ -26,6 +26,13 @@ class PcscManager {
 public:
     PcscManager() { ensure_context(); }  // non-fatal if pcscd isn't up yet
 
+    // Largest number of data bytes per short APDU (Lc). 255 keeps the previous
+    // behaviour; lower it when the IFD handler caps command length (see the
+    // comment on PcscDevice's constructor).
+    void set_max_apdu_data(size_t n) {
+        max_apdu_data_ = (n >= 1 && n <= 255) ? n : 255;
+    }
+
     ~PcscManager() { release_context(); }
 
     PcscManager(const PcscManager&) = delete;
@@ -107,6 +114,7 @@ private:
         int   fails;   // failed probes so far on that insertion
     };
     std::map<std::string, Rejection> rejected_;  // reader -> probe history
+    size_t max_apdu_data_ = 255;  // data bytes per short APDU
 
     static bool is_present(DWORD s) {
         return (s & SCARD_STATE_PRESENT) && !(s & SCARD_STATE_MUTE);
@@ -197,8 +205,8 @@ private:
             return nullptr;
         }
         try {
-            auto dev = std::make_unique<PcscDevice>(ctx_, card,
-                                                    active_protocol, reader);
+            auto dev = std::make_unique<PcscDevice>(ctx_, card, active_protocol,
+                                                   reader, max_apdu_data_);
             result = ConnectResult::Ok;
             return dev;
         } catch (const CtapError&) {

@@ -65,10 +65,17 @@ struct PcscError : std::runtime_error {
 // One connected PC/SC authenticator. Construct via PcscManager::find_fido_card.
 class PcscDevice {
 public:
+    // Data bytes per short APDU (Lc, 1..255). 255 is the CCID maximum, but an
+    // IFD handler may allow less: e.g. a 1-byte command length field caps the
+    // whole command at 254 bytes, and 3 (driver prefix) + 5 (APDU header) + 255
+    // = 263 overflows it. Lower it to fall back to ISO 7816 command chaining.
     PcscDevice(SCARDCONTEXT ctx, SCARDHANDLE card, DWORD active_protocol,
-               std::string name)
+               std::string name, size_t max_apdu_data = 255)
         : ctx_(ctx), card_(card), protocol_(active_protocol),
-          name_(std::move(name)) {
+          name_(std::move(name)),
+          max_apdu_data_(max_apdu_data >= 1 && max_apdu_data <= 255
+                             ? max_apdu_data
+                             : 255) {
         select_applet();
         // Probe for CTAP2 by issuing authenticatorGetInfo (CBOR cmd 0x04),
         // exactly as python-fido2 does in __init__.
@@ -112,6 +119,7 @@ private:
     SCARDHANDLE  card_;
     DWORD        protocol_;
     std::string  name_;
+    size_t       max_apdu_data_;
     uint8_t      capabilities_ = 0;
     bool         use_ext_apdu_ = false;  // bridge cards use short APDUs
 
@@ -144,15 +152,16 @@ private:
         Bytes resp;
         size_t offset = 0;
 
-        // Send data in <=255-byte chunks. All but the last carry CLA|0x10.
-        // Matches the Python while-loop that peels off up to 255 bytes.
+        // Send data in <=max_apdu_data_ byte chunks. All but the last carry
+        // CLA|0x10 (ISO 7816 command chaining); the card reassembles them.
         if (data.empty()) {
             Bytes apdu = {cla, ins, p1, p2, 0x00};  // Lc=0 form + Le
             resp = transmit(apdu, sw);
         } else {
             while (offset < data.size()) {
                 size_t remaining = data.size() - offset;
-                size_t take = remaining > 255 ? 255 : remaining;
+                size_t take = remaining > max_apdu_data_ ? max_apdu_data_
+                                                         : remaining;
                 bool last = (offset + take) >= data.size();
 
                 uint8_t chain_cla = last ? cla : (uint8_t)(0x10 | cla);
