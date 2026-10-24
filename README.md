@@ -117,6 +117,7 @@ Options:
 | `--vid HEX` | `FIDO2_BRIDGE_VID` | USB vendor ID (default `0x349E`) |
 | `--pid HEX` | `FIDO2_BRIDGE_PID` | USB product ID (default `0x0001`) |
 | `--name NAME` | `FIDO2_BRIDGE_NAME` | Device name |
+| `--max-apdu-data N` | `FIDO2_BRIDGE_MAX_APDU_DATA` | Max data bytes per short APDU (default `255`), see [APDU data size](#apdu-data-size) |
 
 Test at https://www.token2.swiss/tools/fido2-demo with a card in the reader.
 
@@ -163,6 +164,32 @@ cmake -B build -S . -DBRIDGE_DEFAULT_PID=0x0200
 If you change the PID, update the `HID_ID` in
 `packaging/70-token2-fido-bridge.rules` to match
 (`0003:0000VVVV:0000PPPP`, uppercase hex).
+
+### APDU data size
+
+By default the bridge puts up to 255 data bytes into one short APDU, which is
+the CCID maximum. Some IFD handlers cannot carry that much: a handler whose
+device protocol encodes the command length in a single byte caps the whole
+command at 254 bytes, and
+
+```
+3 (driver prefix) + 5 (APDU header) + 255 = 263
+```
+
+overflows it. The card then rejects the transfer and pcsc-lite reports it as
+`SCARD_E_NOT_TRANSACTED` ("Card not transacted: <rc>"), which points at
+transactions rather than at the real cause.
+
+Symptoms: WebAuthn registration/assertion or `ssh` signing fails only for
+operations with a larger payload (typically >250 bytes), while smaller ones
+work. Lower the chunk size in that case:
+
+```sh
+sudo token2-fido-bridge --max-apdu-data 240   # 3 + 5 + 240 = 248 <= 254
+```
+
+The value must be between 1 and 255; long payloads are then split with ISO 7816
+command chaining, which the authenticator reassembles transparently.
 
 ## How it works
 

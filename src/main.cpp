@@ -26,15 +26,21 @@ using namespace fido2bridge;
 
 static void usage(const char* prog) {
     std::printf(
-        "Usage: %s [--vid HEX] [--pid HEX] [--name NAME]\n"
+        "Usage: %s [--vid HEX] [--pid HEX] [--name NAME] [--max-apdu-data N]\n"
         "\n"
         "  --vid HEX    USB vendor ID  (default 0x%04X, Token2)\n"
         "  --pid HEX    USB product ID (default 0x%04X)\n"
         "  --name NAME  device name    (default \"FIDO2 Virtual USB Device\")\n"
+        "  --max-apdu-data N\n"
+        "               max data bytes per short APDU (1..255, default 255).\n"
+        "               Lower it when the IFD handler caps command length:\n"
+        "               a 1-byte length field in the driver caps 254 bytes\n"
+        "               total, i.e. 3 + 5 + N <= 254  =>  N <= 246.\n"
         "  -h, --help   show this help\n"
         "\n"
         "Environment overrides (used when the matching flag is absent):\n"
-        "  FIDO2_BRIDGE_VID, FIDO2_BRIDGE_PID, FIDO2_BRIDGE_NAME\n",
+        "  FIDO2_BRIDGE_VID, FIDO2_BRIDGE_PID, FIDO2_BRIDGE_NAME,\n"
+        "  FIDO2_BRIDGE_MAX_APDU_DATA\n",
         prog, DEFAULT_VID, DEFAULT_PID);
 }
 
@@ -55,6 +61,17 @@ int main(int argc, char** argv) {
     if (const char* e = std::getenv("FIDO2_BRIDGE_VID")) parse_hex16(e, vid);
     if (const char* e = std::getenv("FIDO2_BRIDGE_PID")) parse_hex16(e, pid);
     if (const char* e = std::getenv("FIDO2_BRIDGE_NAME")) name = e;
+    size_t max_apdu_data = 255;
+    if (const char* e = std::getenv("FIDO2_BRIDGE_MAX_APDU_DATA")) {
+        char* end = nullptr;
+        long v = std::strtol(e, &end, 10);
+        if (end && *end == '\0' && v >= 1 && v <= 255) {
+            max_apdu_data = static_cast<size_t>(v);
+        } else {
+            std::fprintf(stderr,
+                         "ignoring invalid FIDO2_BRIDGE_MAX_APDU_DATA=%s\n", e);
+        }
+    }
 
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
@@ -76,6 +93,15 @@ int main(int argc, char** argv) {
             }
         } else if (a == "--name") {
             name = next("--name");
+        } else if (a == "--max-apdu-data") {
+            const char* v = next("--max-apdu-data");
+            char* end = nullptr;
+            long n = std::strtol(v, &end, 10);
+            if (!end || *end != '\0' || n < 1 || n > 255) {
+                std::fprintf(stderr, "--max-apdu-data must be 1..255\n");
+                return 2;
+            }
+            max_apdu_data = static_cast<size_t>(n);
         } else {
             std::fprintf(stderr, "unknown argument: %s\n", a.c_str());
             usage(argv[0]);
@@ -83,8 +109,9 @@ int main(int argc, char** argv) {
         }
     }
 
-    std::printf("token2-fido-bridge (C++) starting: vid=0x%04X pid=0x%04X name=\"%s\"\n",
-                vid, pid, name.c_str());
+    std::printf("token2-fido-bridge (C++) starting: vid=0x%04X pid=0x%04X "
+                "name=\"%s\" max_apdu_data=%zu\n",
+                vid, pid, name.c_str(), max_apdu_data);
     std::fflush(stdout);
 
     // The virtual device is now created lazily (when a card appears), so check
@@ -102,6 +129,7 @@ int main(int argc, char** argv) {
 
     try {
         PcscManager pcsc;
+        pcsc.set_max_apdu_data(max_apdu_data);
         std::unique_ptr<CtapHidDevice> bridge;
         auto next_presence_check = clock::now();
 
