@@ -6,11 +6,39 @@ Wants=pcscd.service
 [Service]
 Type=simple
 # Ensure the uhid kernel module is available before we open /dev/uhid.
-ExecStartPre=-/sbin/modprobe uhid
+# "+" runs this outside the sandbox below, which forbids module loading.
+ExecStartPre=-+/sbin/modprobe uhid
 ExecStart=/usr/bin/token2-fido-bridge
 Restart=on-failure
 RestartSec=2
+# root only because /dev/uhid is root:root 0600 and pcscd's polkit policy
+# refuses session-less users; as the owner, root needs no capabilities.
 User=root
+
+# The daemon only opens /dev/uhid and talks to pcscd over its UNIX socket.
+CapabilityBoundingSet=
+NoNewPrivileges=yes
+DevicePolicy=closed
+DeviceAllow=/dev/uhid rw
+PrivateNetwork=yes
+RestrictAddressFamilies=AF_UNIX
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectKernelLogs=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
 
 [Install]
 WantedBy=multi-user.target

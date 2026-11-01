@@ -55,7 +55,8 @@ project has none of that: install the `.deb`, and it just runs.
 
 - Linux with the `uhid` kernel module (standard on Ubuntu/Debian/Fedora)
 - `pcscd` running, a PC/SC reader, and a FIDO2-capable smartcard
-- Runs as root (needs `/dev/uhid`)
+- Runs as root (needs `/dev/uhid`), but the systemd service drops all
+  capabilities and sandboxes the daemon
 
 ## Install
 
